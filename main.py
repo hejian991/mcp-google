@@ -80,12 +80,24 @@ async def make_api_request(
             )
             response.raise_for_status()
             
-            # Return bytes for binary content (exports)
-            if response.headers.get("content-type", "").startswith("application/"):
+            content_type = response.headers.get("content-type", "")
+            
+            # Return JSON for JSON responses (most common case)
+            if "application/json" in content_type:
+                return response.json()
+            
+            # Return bytes for binary content (PDF, DOCX, etc.)
+            elif content_type.startswith(("application/pdf", 
+                                          "application/vnd.", 
+                                          "application/rtf",
+                                          "application/epub")):
                 return response.content
             
-            # Return JSON for structured data
-            return response.json()
+            # Default to JSON for other cases
+            try:
+                return response.json()
+            except:
+                return response.content
             
     except httpx.HTTPStatusError as e:
         error_detail = e.response.text
